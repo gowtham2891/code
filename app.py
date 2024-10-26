@@ -2,14 +2,12 @@ import os
 import streamlit as st
 from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
-from langchain.chains import LLMChain
 from datetime import datetime
 import time
 from dotenv import load_dotenv
 import json
 import logging
 from pathlib import Path
-
 
 # Configure logging
 log_dir = Path("logs")
@@ -424,7 +422,8 @@ def analyze_code(code: str, query: str = None, is_initial_analysis: bool = True)
                 
                 Make your explanation clear, engaging, and actionable, using emojis and formatting to enhance readability.
                 """
-        return get_llm_response(prompt_template, code=code)
+            return get_llm_response(prompt_template, code=code)
+        
         else:
             context = "\n".join([f"{msg['role']}: {msg['content']}" 
                                for msg in st.session_state.conversation_history[-3:]])
@@ -535,7 +534,7 @@ def render_sidebar():
     """Render the sidebar section"""
     with st.sidebar:
         st.markdown("### ⚙️ Settings")
-        st.session_state.is_code_context = st.toggle(
+        st.session_state.is_code_context = st.checkbox(
             "Code-specific questions",
             value=st.session_state.is_code_context,
             help="Toggle between code-specific and general programming questions"
