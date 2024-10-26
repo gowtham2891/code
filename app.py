@@ -11,90 +11,42 @@ import json
 
 
 
-def setup_logging():
-    """Set up logging configuration with both file and console handlers."""
-    # Create logs directory if it doesn't exist
-    os.makedirs('logs', exist_ok=True)
-    
-    # Create a formatter
-    formatter = logging.Formatter(
-        '%(asctime)s [%(levelname)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    
-    # Set up the root logger
-    logger = logging.getLogger('CodeWizard')
-    logger.setLevel(logging.INFO)
-    
-    # Clear any existing handlers
-    logger.handlers.clear()
-    
-    # File handler - logs everything to a daily rotating file
-    file_handler = logging.FileHandler(
-        f'logs/codewizard_{datetime.now().strftime("%Y%m%d")}.log',
-        encoding='utf-8'
-    )
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    
-    # Console handler - for development purposes
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-    
-    return logger
 
-# Custom logger adapter with proper message formatting
+# Configure logging with a simpler format
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+logger = logging.getLogger('CodeWizard')
+
+# Add a custom logger adapter to handle multi-line content
 class ChatLogger(logging.LoggerAdapter):
-    def __init__(self, logger, extra=None):
-        super().__init__(logger, extra or {})
-        self.delimiter = '=' * 80
-
     def process(self, msg, kwargs):
-        # Get content and ensure it's a string
-        content = str(kwargs.pop('content', ''))
-        
-        # Format the message with clear separation
-        if content:
-            formatted_msg = f"{msg}\n{self.delimiter}\n{content}\n{self.delimiter}"
-        else:
-            formatted_msg = msg
-            
+        # Remove delimiter and content from kwargs
+        content = kwargs.pop('content', '')
+        formatted_msg = f"{msg}\n{content}"  # Just use the message and content
         return formatted_msg, kwargs
 
-# Initialize the logger
-base_logger = setup_logging()
-logger = ChatLogger(base_logger)
+
+
+logger = ChatLogger(logger, {})
 
 def log_conversation(role: str, content: str):
-    """Log chat messages with proper error handling."""
-    try:
-        logger.info(
-            f"Chat Message [{role}]",
-            content=content
-        )
-    except Exception as e:
-        logger.error(f"Failed to log conversation: {str(e)}")
+    """Log chat messages with proper formatting."""
+    logger.info(
+    f"Chat Message [{role}]\n---Chat Begin---\n{content}"
+)
+
 
 def log_code_submission(code: str, user: str):
-    """Log code submissions with proper error handling."""
-    try:
-        logger.info(
-            f"Code Submission from {user}",
-            content=code
-        )
-    except Exception as e:
-        logger.error(f"Failed to log code submission: {str(e)}")
-
-def log_session_stats(stats: dict):
-    """Log session statistics with proper error handling."""
-    try:
-        logger.info(
-            "Session Statistics",
-            content=json.dumps(stats, indent=2, ensure_ascii=False)
-        )
-    except Exception as e:
-        logger.error(f"Failed to log session stats: {str(e)}")
+    """Log code submissions with proper formatting."""
+    logger.info(
+        f"Code Submission from {user}",
+        delimiter='---Code Begin---',
+        content=code
+    )
     
     
 
