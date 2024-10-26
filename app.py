@@ -9,9 +9,6 @@ from dotenv import load_dotenv
 import logging
 import json
 
-
-
-
 # Configure logging with a simpler format
 logging.basicConfig(
     level=logging.INFO,
@@ -29,27 +26,27 @@ class ChatLogger(logging.LoggerAdapter):
         formatted_msg = f"{msg}\n{content}"  # Just use the message and content
         return formatted_msg, kwargs
 
-
-
 logger = ChatLogger(logger, {})
 
 def log_conversation(role: str, content: str):
-    """Log chat messages with proper formatting."""
+    """Log chat messages with proper formatting and store user questions."""
     logger.info(
-    f"Chat Message [{role}]\n---Chat Begin---\n{content}"
-)
-
+        f"Chat Message [{role}]\n---Chat Begin---\n{content}"
+    )
+    
+    # Store user questions in session state
+    if role == "user":
+        st.session_state.user_questions.append({
+            "user": st.session_state.user_name,
+            "question": content
+        })
 
 def log_code_submission(code: str, user: str):
     """Log code submissions with proper formatting."""
     logger.info(
-        f"Code Submission from {user}",
-        delimiter='---Code Begin---',
-        content=code
+        f"Code Submission from {user}\n---Code Begin---\n{code}"
     )
     
-    
-
 # Load environment variables
 load_dotenv()
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
@@ -183,6 +180,8 @@ if 'questions_asked' not in st.session_state:
     st.session_state.questions_asked = 0
 if 'code_analyses' not in st.session_state:
     st.session_state.code_analyses = 0
+if 'user_questions' not in st.session_state:  # New variable to store user questions
+    st.session_state.user_questions = []
 
 def show_welcome_screen():
     """Display the welcome screen and handle user name input."""
@@ -227,9 +226,7 @@ def show_user_stats():
     }
     
     logger.info(
-        "Session Statistics",
-        delimiter='---Stats Begin---',
-        content=json.dumps(session_stats, indent=2)
+        "Session Statistics\n" + json.dumps(session_stats, indent=2)
     )
     
     # Display stats in UI
@@ -349,7 +346,6 @@ def general_question(query: str):
         st.error(f"Error processing question: {str(e)}")
         return None
 
-
 # Main application flow
 def main():
     """Main application logic."""
@@ -376,7 +372,6 @@ def main():
             
             col1, col2, col3 = st.columns([1, 2, 1])
             with col2:
-                # EDIT 1: Update the code analysis button section
                 if st.button("🔍 Analyze Code", type="primary", use_container_width=True):
                     if code_input.strip():
                         # Add logging for code submission
@@ -417,12 +412,12 @@ def main():
                     st.session_state.code_submitted = False
                     st.rerun()
             
-            # EDIT 2: Update the chat interface section
+            # Chat interface
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
             
-            # EDIT 3: Update the chat input section
+            # Chat input section
             if prompt := st.chat_input("💭 Ask me anything about the code..."):
                 # Log the user's question
                 log_conversation("user", prompt)
@@ -452,7 +447,7 @@ def main():
                         })
                         st.rerun()
 
-        # EDIT 4: Update the sidebar section
+        # Sidebar section
         with st.sidebar:
             st.markdown("### ⚙️ Settings")
             previous_context = st.session_state.is_code_context
@@ -473,6 +468,7 @@ def main():
                     st.session_state.code_submitted = False
                     st.session_state.current_code = ""
                     st.session_state.conversation_history = []
+                    st.session_state.user_questions = []  # Clear user questions as well
                     st.success("✨ Chat cleared!")
                     st.rerun()
 
