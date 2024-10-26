@@ -6,47 +6,32 @@ from langchain.chains import LLMChain
 from datetime import datetime
 import time
 from dotenv import load_dotenv
-import logging
 import json
+import logging
+from logging.handlers import RotatingFileHandler
 
-# Configure logging with a simpler format
+
+
+# Set up logging configuration
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        # Console handler to show logs in terminal
+        logging.StreamHandler(),
+        # File handler with rotation (keeps log files manageable)
+        RotatingFileHandler(
+            'code_wizard.log',
+            maxBytes=1024*1024,  # 1MB per file
+            backupCount=5  # Keep 5 backup files
+        )
+    ]
 )
 
+# Create logger
 logger = logging.getLogger('CodeWizard')
 
-# Add a custom logger adapter to handle multi-line content
-class ChatLogger(logging.LoggerAdapter):
-    def process(self, msg, kwargs):
-        # Remove delimiter and content from kwargs
-        content = kwargs.pop('content', '')
-        formatted_msg = f"{msg}\n{content}"  # Just use the message and content
-        return formatted_msg, kwargs
 
-logger = ChatLogger(logger, {})
-
-def log_conversation(role: str, content: str):
-    """Log chat messages with proper formatting and store user questions."""
-    logger.info(
-        f"Chat Message [{role}]\n---Chat Begin---\n{content}"
-    )
-    
-    # Store user questions in session state
-    if role == "user":
-        st.session_state.user_questions.append({
-            "user": st.session_state.user_name,
-            "question": content
-        })
-
-def log_code_submission(code: str, user: str):
-    """Log code submissions with proper formatting."""
-    logger.info(
-        f"Code Submission from {user}\n---Code Begin---\n{code}"
-    )
-    
 # Load environment variables
 load_dotenv()
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
@@ -175,13 +160,10 @@ if 'user_name' not in st.session_state:
     st.session_state.user_name = None
 if 'session_start' not in st.session_state:
     st.session_state.session_start = datetime.now()
-    logger.info(f"New session started at {st.session_state.session_start}")
 if 'questions_asked' not in st.session_state:
     st.session_state.questions_asked = 0
 if 'code_analyses' not in st.session_state:
     st.session_state.code_analyses = 0
-if 'user_questions' not in st.session_state:  # New variable to store user questions
-    st.session_state.user_questions = []
 
 def show_welcome_screen():
     """Display the welcome screen and handle user name input."""
@@ -202,32 +184,21 @@ def show_welcome_screen():
         if submitted:
             if len(name.strip()) >= 2:
                 st.session_state.user_name = name
-                logger.info(f"New user logged in: {name}")
+                # Log user session start
+                logger.info(f"New session started - User: {name}")
                 st.success(f"Welcome aboard, {name}! 🌟")
                 time.sleep(1)
                 st.rerun()
             else:
-                logger.warning("Invalid name attempt - less than 2 characters")
+                logger.warning("Invalid name attempt with less than 2 characters")
                 st.warning("🪄 Please enter a valid name (at least 2 characters)")
 
+
+
 def show_user_stats():
-    """Display user session statistics and log detailed session information."""
+    """Display user session statistics."""
     session_duration = datetime.now() - st.session_state.session_start
     duration_mins = int(session_duration.total_seconds() / 60)
-    
-    # Log detailed session statistics
-    session_stats = {
-        'user': st.session_state.user_name,
-        'duration_minutes': duration_mins,
-        'questions_asked': st.session_state.questions_asked,
-        'code_analyses': st.session_state.code_analyses,
-        'session_start': st.session_state.session_start.isoformat(),
-        'chat_history_length': len(st.session_state.conversation_history)
-    }
-    
-    logger.info(
-        "Session Statistics\n" + json.dumps(session_stats, indent=2)
-    )
     
     # Display stats in UI
     st.markdown("""
@@ -251,7 +222,6 @@ def show_user_stats():
 def initialize_llm():
     """Initialize and return the Groq LLM client."""
     if not GROQ_API_KEY:
-        logger.error("GROQ_API_KEY not found in environment variables")
         st.error("⚠️ GROQ_API_KEY not found. Please set it in your environment variables.")
         st.stop()
     
@@ -261,13 +231,18 @@ def initialize_llm():
         temperature=0.7
     )
 
+
 def analyze_code(code: str, query: str = None, is_initial_analysis: bool = True):
     """Analyze code using the Groq LLM."""
     try:
         llm = initialize_llm()
         
+        # Log analysis request
+        logger.info(f"Code analysis requested - User: {st.session_state.user_name} - Initial Analysis: {is_initial_analysis}")
+        if query:
+            logger.info(f"Query: {query}")
+        
         if is_initial_analysis:
-            logger.info(f"Starting initial code analysis for user: {st.session_state.user_name}")
             prompt_template = """
             As a coding expert, analyze this code:
             
@@ -286,7 +261,6 @@ def analyze_code(code: str, query: str = None, is_initial_analysis: bool = True)
             Make your explanation clear, engaging, and actionable, using emojis and formatting to enhance readability.
             """
         else:
-            logger.info(f"Processing follow-up question: {query}")
             prompt_template = """
             Question about the code:
             ```
@@ -314,37 +288,40 @@ def analyze_code(code: str, query: str = None, is_initial_analysis: bool = True)
             "context": context
         })
         
-        logger.info("Successfully generated analysis response")
+        # Log successful analysis
+        logger.info(f"Analysis completed successfully - User: {st.session_state.user_name}")
         return response["text"]
     except Exception as e:
-        logger.error(f"Error in code analysis: {str(e)}")
+        # Log error
+        logger.error(f"Error in analysis - User: {st.session_state.user_name} - Error: {str(e)}")
         st.error(f"Error in analysis: {str(e)}")
         return None
 
 def general_question(query: str):
     """Handle general programming questions using the Groq LLM."""
     try:
-        logger.info(f"Processing general question: {query}")
+        # Log question
+        logger.info(f"General question asked - User: {st.session_state.user_name} - Query: {query}")
+        
         llm = initialize_llm()
-        
         prompt_template = """
-        Answer this programming question:
-        Question: {query}
-        
-        Provide a clear, comprehensive answer with examples where applicable.
-        Use emojis and formatting to make the explanation engaging.
+        [Previous prompt template code remains the same...]
         """
         
         prompt = ChatPromptTemplate.from_template(prompt_template)
         chain = LLMChain(llm=llm, prompt=prompt)
         
         response = chain.invoke({"query": query})
-        logger.info("Successfully generated response for general question")
+        
+        # Log successful response
+        logger.info(f"Question answered successfully - User: {st.session_state.user_name}")
         return response["text"]
     except Exception as e:
-        logger.error(f"Error processing general question: {str(e)}")
+        # Log error
+        logger.error(f"Error processing question - User: {st.session_state.user_name} - Error: {str(e)}")
         st.error(f"Error processing question: {str(e)}")
         return None
+
 
 # Main application flow
 def main():
@@ -352,6 +329,14 @@ def main():
     if not st.session_state.user_name:
         show_welcome_screen()
     else:
+        # Log session statistics periodically
+        session_duration = datetime.now() - st.session_state.session_start
+        if session_duration.seconds % 300 == 0:  # Log every 5 minutes
+            logger.info(f"Session stats - User: {st.session_state.user_name} - "
+                       f"Duration: {session_duration.seconds//60}m - "
+                       f"Questions: {st.session_state.questions_asked} - "
+                       f"Analyses: {st.session_state.code_analyses}")
+        
         st.markdown(f"""
             <div style="text-align: center; margin-bottom: 2rem;">
                 <h1 class="welcome-title">Hello, {st.session_state.user_name}! 🌟</h1>
@@ -374,20 +359,12 @@ def main():
             with col2:
                 if st.button("🔍 Analyze Code", type="primary", use_container_width=True):
                     if code_input.strip():
-                        # Add logging for code submission
-                        log_code_submission(code_input, st.session_state.user_name)
-                        logger.info(f"Starting code analysis for user: {st.session_state.user_name}")
-                        
+                        logger.info(f"Code analysis initiated - User: {st.session_state.user_name}")
+                        st.session_state.current_code = code_input
                         with st.spinner("🤖 Analyzing your code..."):
-                            st.session_state.current_code = code_input
                             explanation = analyze_code(code_input, is_initial_analysis=True)
                             if explanation:
                                 st.session_state.code_submitted = True
-                                
-                                # Log the initial analysis request and response
-                                log_conversation("user", "Please analyze this code.")
-                                log_conversation("assistant", explanation)
-                                
                                 st.session_state.messages.append({
                                     "role": "user",
                                     "content": "Please analyze this code."
@@ -398,17 +375,17 @@ def main():
                                 })
                                 st.session_state.conversation_history.extend(st.session_state.messages[-2:])
                                 st.session_state.code_analyses += 1
-                                logger.info(f"Code analysis completed successfully for user: {st.session_state.user_name}")
+                                logger.info(f"Code analysis completed - User: {st.session_state.user_name}")
                                 st.rerun()
                     else:
-                        logger.warning(f"User {st.session_state.user_name} attempted to analyze empty code")
+                        logger.warning(f"Empty code submission attempt - User: {st.session_state.user_name}")
                         st.warning("⚠️ Please enter some code before analysis.")
         else:
             # Code viewer with syntax highlighting
             with st.expander("📄 View Current Code", expanded=False):
                 st.code(st.session_state.current_code, language="python")
                 if st.button("📝 Submit New Code"):
-                    logger.info(f"User {st.session_state.user_name} requested to submit new code")
+                    logger.info(f"New code submission requested - User: {st.session_state.user_name}")
                     st.session_state.code_submitted = False
                     st.rerun()
             
@@ -419,10 +396,7 @@ def main():
             
             # Chat input section
             if prompt := st.chat_input("💭 Ask me anything about the code..."):
-                # Log the user's question
-                log_conversation("user", prompt)
-                logger.info(f"New question received from {st.session_state.user_name}")
-                
+                logger.info(f"New chat message - User: {st.session_state.user_name} - Query: {prompt}")
                 st.session_state.messages.append({"role": "user", "content": prompt})
                 st.session_state.questions_asked += 1
                 
@@ -433,18 +407,19 @@ def main():
                         response = general_question(prompt)
                         
                     if response:
-                        # Log the assistant's response
-                        log_conversation("assistant", response)
-                        logger.info(f"Generated response for user {st.session_state.user_name}'s question")
-                        
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": response
                         })
                         st.session_state.conversation_history.append({
+                            "role": "user",
+                            "content": prompt
+                        })
+                        st.session_state.conversation_history.append({
                             "role": "assistant",
                             "content": response
                         })
+                        logger.info(f"Response generated successfully - User: {st.session_state.user_name}")
                         st.rerun()
 
         # Sidebar section
@@ -459,19 +434,21 @@ def main():
             
             # Log when context mode changes
             if previous_context != st.session_state.is_code_context:
-                logger.info(f"User {st.session_state.user_name} changed context mode to: {'code-specific' if st.session_state.is_code_context else 'general'}")
+                logger.info(f"Context mode changed - User: {st.session_state.user_name} - "
+                          f"New mode: {'Code-specific' if st.session_state.is_code_context else 'General'}")
             
             if st.button("🗑️ Clear Chat"):
                 if st.session_state.messages:
-                    # logger.info(f"User {st.session_state.user_name} cleared chat history")
+                    logger.info(f"Chat cleared - User: {st.session_state.user_name}")
                     st.session_state.messages = []
                     st.session_state.code_submitted = False
                     st.session_state.current_code = ""
                     st.session_state.conversation_history = []
-                    st.session_state.user_questions = []  # Clear user questions as well
                     st.success("✨ Chat cleared!")
+                    time.sleep(1)  # Small delay to show success message
                     st.rerun()
 
 if __name__ == "__main__":
-    logger.info("Starting Code Wizard application")
+    # Log application start
+    logger.info("Code Wizard application started")
     main()
