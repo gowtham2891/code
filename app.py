@@ -425,36 +425,36 @@ def analyze_code(code: str, query: str = None, is_initial_analysis: bool = True)
                 Make your explanation clear, engaging, and actionable, using emojis and formatting to enhance readability.
                 """
         return get_llm_response(prompt_template, code=code)
-    else:
-        context = "\n".join([f"{msg['role']}: {msg['content']}" 
-                           for msg in st.session_state.conversation_history[-3:]])
-        
-        prompt_template = """
-        Question about the code:
-        ```
-        {code}
-        ```
-        
-        Question: {query}
-        
-        Previous context:
-        {context}
-        
-        Provide a focused, clear answer with relevant code references and examples where applicable.
-        Use emojis and formatting to make the explanation more engaging.
-        """
-        response = get_llm_response(prompt_template, code=code, query=query, context=context)
-        
-        # Log the analysis request
-        log_user_action(
-            "code_analysis" if is_initial_analysis else "follow_up_question",
-            {
-                "code_length": len(code),
-                "query": query if query else "initial_analysis",
-                "success": bool(response)
-            }
-        )
-        return response
+        else:
+            context = "\n".join([f"{msg['role']}: {msg['content']}" 
+                               for msg in st.session_state.conversation_history[-3:]])
+            
+            prompt_template = """
+            Question about the code:
+            ```
+            {code}
+            ```
+            
+            Question: {query}
+            
+            Previous context:
+            {context}
+            
+            Provide a focused, clear answer with relevant code references and examples where applicable.
+            Use emojis and formatting to make the explanation more engaging.
+            """
+            response = get_llm_response(prompt_template, code=code, query=query, context=context)
+            
+            # Log the analysis request
+            log_user_action(
+                "code_analysis" if is_initial_analysis else "follow_up_question",
+                {
+                    "code_length": len(code),
+                    "query": query if query else "initial_analysis",
+                    "success": bool(response)
+                }
+            )
+            return response
     except Exception as e:
         log_user_action("error", {
             "error_type": str(type(e).__name__),
