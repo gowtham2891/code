@@ -313,10 +313,6 @@ def init_session_state():
     """Initialize all session state variables"""
     if 'session_id' not in st.session_state:
         st.session_state.session_id = datetime.now().strftime('%Y%m%d_%H%M%S')
-    [Previous session state initializations remain the same...]
-
-def init_session_state():
-    """Initialize all session state variables"""
     if 'messages' not in st.session_state:
         st.session_state.messages = []
     if 'code_submitted' not in st.session_state:
