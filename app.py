@@ -407,23 +407,23 @@ def analyze_code(code: str, query: str = None, is_initial_analysis: bool = True)
     try:
         response = None
         if is_initial_analysis:
-        prompt_template = """
-        As a coding expert, analyze this code:
-        
-        ```
-        {code}
-        ```
-        
-        Provide a detailed yet engaging analysis including:
-        1. 🎯 Overview of what the code does
-        2. 🔍 Key components and their functionality
-        3. 💡 Notable programming concepts used
-        4. ⚡ Performance considerations
-        5. 🛡️ Security considerations if applicable
-        6. ✨ Potential improvements and best practices
-        
-        Make your explanation clear, engaging, and actionable, using emojis and formatting to enhance readability.
-        """
+            prompt_template = """
+                As a coding expert, analyze this code:
+                
+                ```
+                {code}
+                ```
+                
+                Provide a detailed yet engaging analysis including:
+                1. 🎯 Overview of what the code does
+                2. 🔍 Key components and their functionality
+                3. 💡 Notable programming concepts used
+                4. ⚡ Performance considerations
+                5. 🛡️ Security considerations if applicable
+                6. ✨ Potential improvements and best practices
+                
+                Make your explanation clear, engaging, and actionable, using emojis and formatting to enhance readability.
+                """
         return get_llm_response(prompt_template, code=code)
     else:
         context = "\n".join([f"{msg['role']}: {msg['content']}" 
