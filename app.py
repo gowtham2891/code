@@ -14,10 +14,10 @@ import json
 # Configure logging with a more detailed format and multiple handlers
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("code_wizard.log"),  # Save logs to a file
-        logging.StreamHandler()  # Ensure logs are captured in terminal/console
+        logging.FileHandler("code_wizard.log"),
+        logging.StreamHandler()
     ]
 )
 logger = logging.getLogger('CodeWizard')
@@ -31,46 +31,68 @@ def log_interaction(username: str, interaction_type: str, content: str):
         interaction_type: Type of interaction (e.g., login, code_submission, analysis)
         content: The content of the interaction
     """
-    log_message = {
-        "timestamp": datetime.now().isoformat(),
-        "user": username,
-        "type": interaction_type,
-        "content": content
-    }
-    logging.info(json.dumps(log_message))
+    try:
+        log_data = {
+            "timestamp": datetime.now().isoformat(),
+            "user": username,
+            "type": interaction_type,
+            "content": content
+        }
+        logger.info(json.dumps(log_data))
+    except Exception as e:
+        logger.error(f"Error logging interaction: {str(e)}")
 
 def log_code_submission(code: str, username: str):
     """Log code submissions with proper formatting."""
-    log_interaction(
-        username=username,
-        interaction_type="code_submission",
-        content=f"Code length: {len(code)} characters\n{'-' * 40}\n{code}\n{'-' * 40}"
-    )
+    try:
+        log_data = {
+            "code_length": len(code),
+            "code": code
+        }
+        log_interaction(
+            username=username,
+            interaction_type="code_submission",
+            content=json.dumps(log_data)
+        )
+    except Exception as e:
+        logger.error(f"Error logging code submission: {str(e)}")
 
 def log_analysis_request(username: str, is_initial: bool = True):
     """Log analysis requests."""
-    log_interaction(
-        username=username,
-        interaction_type="analysis_request",
-        content="Initial code analysis" if is_initial else "Follow-up analysis"
-    )
+    try:
+        log_interaction(
+            username=username,
+            interaction_type="analysis_request",
+            content="Initial code analysis" if is_initial else "Follow-up analysis"
+        )
+    except Exception as e:
+        logger.error(f"Error logging analysis request: {str(e)}")
 
 def log_analysis_response(username: str, response: str):
     """Log analysis responses."""
-    log_interaction(
-        username=username,
-        interaction_type="analysis_response",
-        content=f"Response length: {len(response)} characters\n{'-' * 40}\n{response}\n{'-' * 40}"
-    )
+    try:
+        log_data = {
+            "response_length": len(response),
+            "response": response
+        }
+        log_interaction(
+            username=username,
+            interaction_type="analysis_response",
+            content=json.dumps(log_data)
+        )
+    except Exception as e:
+        logger.error(f"Error logging analysis response: {str(e)}")
 
 def log_session_stats(username: str, stats: dict):
     """Log detailed session statistics."""
-    log_interaction(
-        username=username,
-        interaction_type="session_stats",
-        content=json.dumps(stats, indent=2)
-    )
-    
+    try:
+        log_interaction(
+            username=username,
+            interaction_type="session_stats",
+            content=json.dumps(stats, indent=2)
+        )
+    except Exception as e:
+        logger.error(f"Error logging session stats: {str(e)}")    
     
 
 # Load environment variables
