@@ -463,7 +463,7 @@ def main():
             
             if st.button("🗑️ Clear Chat"):
                 if st.session_state.messages:
-                    logger.info(f"User {st.session_state.user_name} cleared chat history")
+                    # logger.info(f"User {st.session_state.user_name} cleared chat history")
                     st.session_state.messages = []
                     st.session_state.code_submitted = False
                     st.session_state.current_code = ""
