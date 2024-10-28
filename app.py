@@ -2,21 +2,51 @@ import os
 import streamlit as st
 from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
+from langchain.chains import LLMChain
 from datetime import datetime
 import time
 from dotenv import load_dotenv
-import json
 import logging
-from pathlib import Path
+import json
+from logging.handlers import RotatingFileHandler
 
-# Configure logging
-log_dir = Path("logs")
-log_dir.mkdir(exist_ok=True)
-logging.basicConfig(
-    filename=log_dir / f"code_wizard_{datetime.now().strftime('%Y%m%d')}.log",
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+
+# Create logs directory if it doesn't exist
+os.makedirs('logs', exist_ok=True)
+
+# Configure file handler with rotation
+file_handler = RotatingFileHandler(
+    'logs/code_wizard.log',
+    maxBytes=1024 * 1024,  # 1MB
+    backupCount=5
 )
+
+# Configure logging with both console and file output
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[
+        file_handler,
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger('CodeWizard')
+
+def log_event(event_type: str, content: str, metadata: dict = None):
+    """Structured logging function for all events"""
+    try:
+        log_data = {
+            'event_type': event_type,
+            'content': content,
+            'timestamp': datetime.now().isoformat(),
+            'metadata': metadata or {}
+        }
+        logger.info(json.dumps(log_data))
+    except Exception as e:
+        logger.error(f"Logging error: {str(e)}")
+
 
 # Load environment variables
 load_dotenv()
@@ -33,267 +63,349 @@ st.set_page_config(
 # Enhanced CSS with modern styling
 st.markdown("""
 <style>
-/* Root Variables for Theme Colors */
-:root {
-    /* Light Theme Default Colors */
-    --primary-light: #6366f1;
-    --primary-dark: #8b5cf6;
-    --success-light: #22c55e;
-    --warning-light: #f59e0b;
-    --error-light: #ef4444;
-    --background-light: #f8fafc;
-    --card-bg-light: #ffffff;
-    --text-primary-light: #1a1a1a;
-    --text-secondary-light: #4b5563;
-    --border-light: #e2e8f0;
-    --code-bg-light: #f8fafc;
-    --hover-light: #f1f5f9;
-    
-    /* Dark Theme Colors */
-    --primary-dark-theme: #818cf8;
-    --primary-dark-theme-hover: #6366f1;
-    --background-dark: #1a1a1a;
-    --card-bg-dark: #2d2d2d;
-    --text-primary-dark: #ffffff;
-    --text-secondary-dark: #9ca3af;
-    --border-dark: #404040;
-    --code-bg-dark: #2b2b2b;
-    --hover-dark: #3d3d3d;
-}
+    /* Reset and Base Styles */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
 
-/* Base Styles */
-.stApp {
-    background-color: var(--background-light);
-    color: var(--text-primary-light);
-    transition: all 0.3s ease;
-}
+    /* Theme Variables */
+    :root {
+        /* Light Theme Colors */
+        --primary-color: #6366f1;
+        --secondary-color: #8b5cf6;
+        --success-color: #22c55e;
+        --warning-color: #f59e0b;
+        --error-color: #ef4444;
+        --light-bg: #f8fafc;
+        --dark-bg: #1a1a1a;
+        --light-text: #ffffff;
+        --dark-text: #1a1a1a;
+        --border-light: #e2e8f0;
+        --border-dark: #404040;
+        
+        /* Spacing */
+        --spacing-xs: 0.25rem;
+        --spacing-sm: 0.5rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        
+        /* Transitions */
+        --transition-fast: 0.2s ease;
+        --transition-normal: 0.3s ease;
+        --transition-slow: 0.5s ease;
+    }
 
-/* Welcome Container Styles */
-.welcome-container {
-    text-align: center;
-    padding: 2rem;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border-radius: 1rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    animation: fadeIn 0.8s ease-out;
-}
+    /* Dark Mode Variables */
+    [data-theme="dark"] {
+        --background-color: var(--dark-bg);
+        --text-color: var(--light-text);
+        --card-bg: #2d2d2d;
+        --card-border: var(--border-dark);
+        --highlight-bg: #2d3748;
+        --code-bg: #2d2d2d;
+        --input-bg: #374151;
+        --input-text: var(--light-text);
+        --shadow-color: rgba(0, 0, 0, 0.3);
+    }
 
-.welcome-title {
-    font-size: 2.5rem;
-    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-dark) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 1rem;
-    font-weight: bold;
-}
+    /* Light Mode Variables */
+    [data-theme="light"] {
+        --background-color: var(--light-bg);
+        --text-color: var(--dark-text);
+        --card-bg: #ffffff;
+        --card-border: var(--border-light);
+        --highlight-bg: #e0f2fe;
+        --code-bg: #f8fafc;
+        --input-bg: #ffffff;
+        --input-text: var(--dark-text);
+        --shadow-color: rgba(0, 0, 0, 0.1);
+    }
 
-/* Stats Card Styles */
-.stats-card {
-    background: var(--card-bg-light);
-    border-radius: 1rem;
-    padding: 1.5rem;
-    margin: 1rem 0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    border: 1px solid var(--border-light);
-}
-
-.stats-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.stat-item {
-    display: inline-block;
-    margin: 0 1rem;
-    text-align: center;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    transition: background-color 0.3s ease;
-}
-
-.stat-item:hover {
-    background-color: var(--hover-light);
-}
-
-.stat-item h3 {
-    color: var(--text-secondary-light);
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-}
-
-.stat-item p {
-    color: var(--text-primary-light);
-    font-size: 1.5rem;
-    font-weight: bold;
-}
-
-/* Code Area Styling */
-.stTextArea textarea {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    border-radius: 0.5rem;
-    border: 1px solid var(--border-light);
-    padding: 1rem;
-    font-size: 0.9rem;
-    background-color: var(--code-bg-light);
-    color: var(--text-primary-light);
-    transition: all 0.3s ease;
-    line-height: 1.5;
-}
-
-.stTextArea textarea:focus {
-    border-color: var(--primary-light);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-}
-
-/* Button Styling */
-.stButton button {
-    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-dark) 100%);
-    color: white;
-    border: none;
-    padding: 0.75rem 2rem;
-    border-radius: 0.5rem;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.stButton button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
-    opacity: 0.9;
-}
-
-.stButton button:active {
-    transform: translateY(0);
-}
-
-/* Chat Interface Styling */
-.chat-message {
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-    animation: fadeIn 0.5s ease-out;
-    border: 1px solid var(--border-light);
-}
-
-.user-message {
-    background-color: var(--hover-light);
-    margin-left: 2rem;
-}
-
-.assistant-message {
-    background-color: #f0fdf4;
-    margin-right: 2rem;
-}
-
-/* Dark Mode Styles */
-@media (prefers-color-scheme: dark) {
+    /* Main App Container */
     .stApp {
-        background-color: var(--background-dark);
-        color: var(--text-primary-dark);
+        background-color: var(--background-color);
+        color: var(--text-color);
+        transition: background-color var(--transition-normal);
     }
 
+    /* Hide Streamlit Default Elements */
+    .stApp > header {
+        display: none !important;
+    }
+
+    /* Welcome Container */
     .welcome-container {
-        background: linear-gradient(135deg, #2d2d2d 0%, #3d3d3d 100%);
+        text-align: center;
+        padding: var(--spacing-xl);
+        background: linear-gradient(145deg, var(--card-bg), var(--highlight-bg));
+        border-radius: 1rem;
+        margin-bottom: var(--spacing-xl);
+        box-shadow: 0 4px 15px var(--shadow-color);
+        animation: slideIn 0.8s ease-out, fadeIn 0.8s ease-out;
+        border: 1px solid var(--card-border);
     }
 
+    /* Welcome Title */
     .welcome-title {
-        background: linear-gradient(135deg, var(--primary-dark-theme) 0%, var(--primary-dark) 100%);
+        font-size: 2.5rem;
+        font-weight: bold;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: var(--spacing-md);
+        animation: gradientFlow 8s ease infinite;
+    }
+
+    /* Stats Cards */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-md);
+        margin: var(--spacing-lg) 0;
     }
 
     .stats-card {
-        background: var(--card-bg-dark);
-        border-color: var(--border-dark);
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: var(--spacing-lg);
+        border: 1px solid var(--card-border);
+        box-shadow: 0 4px 6px var(--shadow-color);
+        transition: all var(--transition-normal);
+        animation: slideUp 0.5s ease-out;
     }
 
-    .stat-item:hover {
-        background-color: var(--hover-dark);
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 12px var(--shadow-color);
     }
 
-    .stat-item h3 {
-        color: var(--text-secondary-dark);
-    }
-
-    .stat-item p {
-        color: var(--text-primary-dark);
-    }
-
-    .stTextArea textarea {
-        background-color: var(--code-bg-dark) !important;
-        color: var(--text-primary-dark) !important;
-        border-color: var(--border-dark) !important;
-    }
-
-    .stTextArea textarea:focus {
-        border-color: var(--primary-dark-theme);
-        box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+    /* Chat Messages */
+    .chat-container {
+        margin: var(--spacing-lg) 0;
+        animation: fadeIn var(--transition-normal);
     }
 
     .chat-message {
-        border-color: var(--border-dark);
+        padding: var(--spacing-md);
+        border-radius: 0.5rem;
+        margin-bottom: var(--spacing-md);
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        box-shadow: 0 2px 4px var(--shadow-color);
+        animation: slideIn 0.3s ease-out;
     }
 
     .user-message {
-        background-color: var(--hover-dark);
+        margin-left: var(--spacing-xl);
+        background: var(--highlight-bg);
     }
 
     .assistant-message {
-        background-color: #1a2e1a;
+        margin-right: var(--spacing-xl);
     }
 
-    /* Code Syntax Highlighting in Dark Mode */
-    pre {
-        background-color: var(--code-bg-dark) !important;
-        color: var(--text-primary-dark) !important;
-        border-color: var(--border-dark) !important;
+    /* Input Elements */
+    .stTextInput input {
+        color: var(--input-text);
+        background-color: var(--input-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 0.5rem;
+        padding: var(--spacing-sm) var(--spacing-md);
+        transition: all var(--transition-normal);
     }
 
-    code {
-        color: #e06c75 !important;
-    }
-}
-
-/* Animations */
-@keyframes fadeIn {
-    from { 
-        opacity: 0; 
-        transform: translateY(20px); 
-    }
-    to { 
-        opacity: 1; 
-        transform: translateY(0); 
-    }
-}
-
-/* Mobile Responsiveness */
-@media screen and (max-width: 768px) {
-    .welcome-container {
-        padding: 1.5rem;
+    .stTextInput input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
     }
 
-    .welcome-title {
-        font-size: 2rem;
+    /* Code Area */
+    .stTextArea textarea {
+        font-family: 'Courier New', Courier, monospace;
+        background-color: var(--code-bg);
+        color: var(--text-color);
+        border: 1px solid var(--card-border);
+        border-radius: 0.5rem;
+        padding: var(--spacing-md);
+        font-size: 0.9rem;
+        line-height: 1.5;
+        transition: all var(--transition-normal);
     }
 
-    .stats-card {
-        padding: 1rem;
+    .stTextArea textarea:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
     }
 
-    .stat-item {
-        margin: 0.5rem;
-        padding: 0.75rem;
+    /* Buttons */
+    .stButton button {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: var(--light-text) !important;
+        border: none;
+        padding: var(--spacing-sm) var(--spacing-xl);
+        border-radius: 0.5rem;
+        font-weight: bold;
+        transition: all var(--transition-normal);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
-    .chat-message {
-        margin-left: 1rem;
-        margin-right: 1rem;
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
     }
-}
+
+    .stButton button:active {
+        transform: translateY(0);
+    }
+
+    /* Progress Bar */
+    .stProgress > div > div > div {
+        background-color: var(--primary-color);
+        transition: width var(--transition-normal);
+    }
+
+    /* Tooltips */
+    [data-tooltip]:hover::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        background: var(--dark-bg);
+        color: var(--light-text);
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes gradientFlow {
+        0% {
+            background-position: 0% 50%;
+        }
+        50% {
+            background-position: 100% 50%;
+        }
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.05);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    /* Loading Animation */
+    .loading {
+        display: inline-block;
+        position: relative;
+        width: 80px;
+        height: 80px;
+    }
+
+    .loading div {
+        position: absolute;
+        border: 4px solid var(--primary-color);
+        opacity: 1;
+        border-radius: 50%;
+        animation: loading 1s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+    }
+
+    @keyframes loading {
+        0% {
+            top: 36px;
+            left: 36px;
+            width: 0;
+            height: 0;
+            opacity: 1;
+        }
+        100% {
+            top: 0px;
+            left: 0px;
+            width: 72px;
+            height: 72px;
+            opacity: 0;
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .stats-container {
+            grid-template-columns: 1fr;
+        }
+
+        .welcome-title {
+            font-size: 2rem;
+        }
+
+        .chat-message {
+            margin-left: var(--spacing-sm);
+            margin-right: var(--spacing-sm);
+        }
+    }
+
+    /* System Dark Mode Detection */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            color-scheme: dark;
+        }
+    }
 </style>
+
+<script>
+    // Dark Mode Detection and Handling
+    function setTheme() {
+        const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.body.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    }
+
+    // Initial theme setting
+    setTheme();
+
+    // Listen for system theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
+</script>
 """, unsafe_allow_html=True)
 
 def log_user_action(action_type: str, details: dict = None):
@@ -332,28 +444,35 @@ def init_session_state():
 
 def show_welcome_screen():
     """Display the welcome screen and handle user name input."""
-    st.markdown("""
-        <div class="welcome-container">
-            <h1 class="welcome-title">🪄 Welcome to Code Wizard</h1>
-            <p style="font-size: 1.2rem; color: #4b5563;">Your magical companion for code analysis and improvement</p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    with st.form("welcome_form"):
-        name = st.text_input(
-            "What's your name, fellow wizard? 🧙‍♂️",
-            placeholder="Enter your name to begin...",
-            label_visibility="visible"
-        )
-        submitted = st.form_submit_button("✨ Begin Your Coding Journey", use_container_width=True)
-        if submitted and len(name.strip()) >= 2:
-            st.session_state.user_name = name
-            log_user_action("login", {"name": name})
-            st.success(f"Welcome aboard, {name}! 🌟")
-            time.sleep(1)
-            st.rerun()
-        elif submitted:
-            st.warning("🪄 Please enter a valid name (at least 2 characters)")
+    try:
+        st.markdown("""
+            <div class="welcome-container">
+                <h1 class="welcome-title">🪄 Welcome to Code Wizard</h1>
+                <p style="font-size: 1.2rem;">Your magical companion for code analysis and improvement</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        with st.form("welcome_form"):
+            name = st.text_input(
+                "🧙‍♂️ What's your name, fellow wizard?",
+                placeholder="Enter your name to begin..."
+            )
+            submitted = st.form_submit_button("✨ Begin Your Coding Journey", use_container_width=True)
+            
+            if submitted:
+                if len(name.strip()) >= 2:
+                    st.session_state.user_name = name
+                    log_event("login", f"User logged in: {name}")
+                    st.success(f"Welcome aboard, {name}! 🌟")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    log_event("login_failed", "Invalid name attempt", {"name_length": len(name.strip())})
+                    st.warning("🪄 Please enter a valid name (at least 2 characters)")
+    except Exception as e:
+        log_event("error", f"Error in welcome screen: {str(e)}")
+        st.error("An error occurred. Please try again.")
+
 
 def show_user_stats():
     """Display user session statistics."""
