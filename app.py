@@ -72,247 +72,52 @@ st.markdown("""
 
     /* Theme Variables */
     :root {
-        /* Light Theme Colors */
         --primary-color: #6366f1;
         --secondary-color: #8b5cf6;
         --success-color: #22c55e;
-        --warning-color: #f59e0b;
-        --error-color: #ef4444;
         --light-bg: #f8fafc;
         --dark-bg: #1a1a1a;
         --light-text: #ffffff;
         --dark-text: #1a1a1a;
         --border-light: #e2e8f0;
-        --border-dark: #404040;
-        
-        /* Spacing */
-        --spacing-xs: 0.25rem;
-        --spacing-sm: 0.5rem;
-        --spacing-md: 1rem;
-        --spacing-lg: 1.5rem;
-        --spacing-xl: 2rem;
-        
-        /* Transitions */
-        --transition-fast: 0.2s ease;
-        --transition-normal: 0.3s ease;
-        --transition-slow: 0.5s ease;
-    }
-
-    /* Dark Mode Variables */
-    [data-theme="dark"] {
-        --background-color: var(--dark-bg);
-        --text-color: var(--light-text);
-        --card-bg: #2d2d2d;
-        --card-border: var(--border-dark);
-        --highlight-bg: #2d3748;
-        --code-bg: #2d2d2d;
-        --input-bg: #374151;
-        --input-text: var(--light-text);
-        --shadow-color: rgba(0, 0, 0, 0.3);
-    }
-
-    /* Light Mode Variables */
-    [data-theme="light"] {
-        --background-color: var(--light-bg);
-        --text-color: var(--dark-text);
-        --card-bg: #ffffff;
-        --card-border: var(--border-light);
-        --highlight-bg: #e0f2fe;
-        --code-bg: #f8fafc;
-        --input-bg: #ffffff;
-        --input-text: var(--dark-text);
-        --shadow-color: rgba(0, 0, 0, 0.1);
-    }
-
-    /* Main App Container */
-    .stApp {
-        background-color: var(--background-color);
-        color: var(--text-color);
-        transition: background-color var(--transition-normal);
-    }
-
-    /* Hide Streamlit Default Elements */
-    .stApp > header {
-        display: none !important;
-    }
-
-    /* Welcome Container */
-    .welcome-container {
-        text-align: center;
-        padding: var(--spacing-xl);
-        background: linear-gradient(145deg, var(--card-bg), var(--highlight-bg));
-        border-radius: 1rem;
-        margin-bottom: var(--spacing-xl);
-        box-shadow: 0 4px 15px var(--shadow-color);
-        animation: slideIn 0.8s ease-out, fadeIn 0.8s ease-out;
-        border: 1px solid var(--card-border);
-    }
-
-    /* Welcome Title */
-    .welcome-title {
-        font-size: 2.5rem;
-        font-weight: bold;
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: var(--spacing-md);
-        animation: gradientFlow 8s ease infinite;
-    }
-
-    /* Stats Cards */
-    .stats-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: var(--spacing-md);
-        margin: var(--spacing-lg) 0;
-    }
-
-    .stats-card {
-        background: var(--card-bg);
-        border-radius: 1rem;
-        padding: var(--spacing-lg);
-        border: 1px solid var(--card-border);
-        box-shadow: 0 4px 6px var(--shadow-color);
-        transition: all var(--transition-normal);
-        animation: slideUp 0.5s ease-out;
-    }
-
-    .stats-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 12px var(--shadow-color);
-    }
-
-    /* Chat Messages */
-    .chat-container {
-        margin: var(--spacing-lg) 0;
-        animation: fadeIn var(--transition-normal);
-    }
-
-    .chat-message {
-        padding: var(--spacing-md);
-        border-radius: 0.5rem;
-        margin-bottom: var(--spacing-md);
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        box-shadow: 0 2px 4px var(--shadow-color);
-        animation: slideIn 0.3s ease-out;
-    }
-
-    .user-message {
-        margin-left: var(--spacing-xl);
-        background: var(--highlight-bg);
-    }
-
-    .assistant-message {
-        margin-right: var(--spacing-xl);
-    }
-
-    /* Input Elements */
-    .stTextInput input {
-        color: var(--input-text);
-        background-color: var(--input-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 0.5rem;
-        padding: var(--spacing-sm) var(--spacing-md);
-        transition: all var(--transition-normal);
-    }
-
-    .stTextInput input:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-    }
-
-    /* Code Area */
-    .stTextArea textarea {
-        font-family: 'Courier New', Courier, monospace;
-        background-color: var(--code-bg);
-        color: var(--text-color);
-        border: 1px solid var(--card-border);
-        border-radius: 0.5rem;
-        padding: var(--spacing-md);
-        font-size: 0.9rem;
-        line-height: 1.5;
-        transition: all var(--transition-normal);
-    }
-
-    .stTextArea textarea:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-    }
-
-    /* Buttons */
-    .stButton button {
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: var(--light-text) !important;
-        border: none;
-        padding: var(--spacing-sm) var(--spacing-xl);
-        border-radius: 0.5rem;
-        font-weight: bold;
-        transition: all var(--transition-normal);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .stButton button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-    }
-
-    .stButton button:active {
-        transform: translateY(0);
-    }
-
-    /* Progress Bar */
-    .stProgress > div > div > div {
-        background-color: var(--primary-color);
-        transition: width var(--transition-normal);
-    }
-
-    /* Tooltips */
-    [data-tooltip]:hover::before {
-        content: attr(data-tooltip);
-        position: absolute;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: var(--spacing-xs) var(--spacing-sm);
-        background: var(--dark-bg);
-        color: var(--light-text);
-        border-radius: 0.25rem;
-        font-size: 0.8rem;
-        white-space: nowrap;
-        animation: fadeIn 0.2s ease-out;
     }
 
     /* Animations */
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateX(-20px);
+    @keyframes floatIn {
+        0% { 
+            transform: translateY(20px); 
+            opacity: 0; 
         }
-        to {
-            opacity: 1;
-            transform: translateX(0);
+        100% { 
+            transform: translateY(0); 
+            opacity: 1; 
         }
     }
 
-    @keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
+    @keyframes glowPulse {
+        0% { 
+            box-shadow: 0 0 5px var(--primary-color);
         }
-        to {
-            opacity: 1;
-            transform: translateY(0);
+        50% { 
+            box-shadow: 0 0 20px var(--primary-color);
+        }
+        100% { 
+            box-shadow: 0 0 5px var(--primary-color);
         }
     }
 
-    @keyframes gradientFlow {
+    @keyframes sparkle {
+        0%, 100% { 
+            opacity: 0; 
+            transform: scale(0);
+        }
+        50% { 
+            opacity: 1; 
+            transform: scale(1);
+        }
+    }
+
+    @keyframes gradientBG {
         0% {
             background-position: 0% 50%;
         }
@@ -324,49 +129,139 @@ st.markdown("""
         }
     }
 
-    @keyframes pulse {
-        0% {
-            transform: scale(1);
-        }
-        50% {
-            transform: scale(1.05);
-        }
-        100% {
-            transform: scale(1);
-        }
+    /* Welcome Container */
+    .welcome-container {
+        position: relative;
+        text-align: center;
+        padding: 2rem;
+        background: linear-gradient(-45deg, var(--primary-color), var(--secondary-color), #4f46e5, #7c3aed);
+        background-size: 400% 400%;
+        animation: gradientBG 15s ease infinite;
+        border-radius: 1rem;
+        margin: 2rem 0;
+        color: white;
+        overflow: hidden;
+    }
+
+    .welcome-title {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        animation: floatIn 1s ease-out;
+    }
+
+    /* Stats Cards */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .stats-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        animation: floatIn 0.8s ease-out;
+        cursor: pointer;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Code Area */
+    .code-input {
+        position: relative;
+        margin: 1rem 0;
+    }
+
+    .code-input::before {
+        content: '✨';
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .code-input:focus-within::before {
+        opacity: 1;
+    }
+
+    /* Buttons */
+    .magic-button {
+        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 0.5rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .magic-button::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 60%);
+        transform: scale(0);
+        opacity: 0;
+        transition: transform 0.6s, opacity 0.6s;
+    }
+
+    .magic-button:hover::after {
+        transform: scale(1);
+        opacity: 0.3;
+    }
+
+    /* Chat Messages */
+    .chat-message {
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 0.5rem;
+        animation: floatIn 0.5s ease-out;
+        position: relative;
+    }
+
+    .user-message {
+        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        margin-left: 2rem;
+    }
+
+    .assistant-message {
+        background: white;
+        border: 1px solid var(--border-light);
+        margin-right: 2rem;
     }
 
     /* Loading Animation */
-    .loading {
+    .loading-wizard {
         display: inline-block;
         position: relative;
         width: 80px;
         height: 80px;
     }
 
-    .loading div {
+    .loading-wizard::after {
+        content: '🪄';
+        font-size: 2rem;
         position: absolute;
-        border: 4px solid var(--primary-color);
-        opacity: 1;
-        border-radius: 50%;
-        animation: loading 1s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+        animation: spin 1s linear infinite;
     }
 
-    @keyframes loading {
-        0% {
-            top: 36px;
-            left: 36px;
-            width: 0;
-            height: 0;
-            opacity: 1;
-        }
-        100% {
-            top: 0px;
-            left: 0px;
-            width: 72px;
-            height: 72px;
-            opacity: 0;
-        }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 
     /* Responsive Design */
@@ -380,21 +275,63 @@ st.markdown("""
         }
 
         .chat-message {
-            margin-left: var(--spacing-sm);
-            margin-right: var(--spacing-sm);
-        }
-    }
-
-    /* System Dark Mode Detection */
-    @media (prefers-color-scheme: dark) {
-        :root {
-            color-scheme: dark;
+            margin-left: 1rem;
+            margin-right: 1rem;
         }
     }
 </style>
 
 <script>
-    // Dark Mode Detection and Handling
+    // Function to add sparkles effect
+    function createSparkle() {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'sparkle';
+        sparkle.style.left = Math.random() * 100 + '%';
+        sparkle.style.top = Math.random() * 100 + '%';
+        sparkle.style.animation = 'sparkle 1s forwards';
+        
+        document.querySelector('.welcome-container').appendChild(sparkle);
+        
+        setTimeout(() => {
+            sparkle.remove();
+        }, 1000);
+    }
+
+    // Add sparkles periodically
+    setInterval(createSparkle, 300);
+
+    // Add hover effects to stats cards
+    document.querySelectorAll('.stats-card').forEach(card => {
+        card.addEventListener('mouseover', function() {
+            this.style.transform = 'translateY(-5px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseout', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+
+    // Add magic effect to buttons
+    document.querySelectorAll('.magic-button').forEach(button => {
+        button.addEventListener('click', function(e) {
+            const rect = button.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+            ripple.style.left = `${x}px`;
+            ripple.style.top = `${y}px`;
+            
+            button.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+
+    // Dark mode detection and handling
     function setTheme() {
         const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
         document.body.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -405,8 +342,17 @@ st.markdown("""
 
     // Listen for system theme changes
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
+
+    // Smooth scroll animation
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            target.scrollIntoView({ behavior: 'smooth' });
+        });
+    });
 </script>
-""", unsafe_allow_html=True)
+
 
 def log_user_action(action_type: str, details: dict = None):
     """Log user actions with additional details"""
