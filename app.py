@@ -8,44 +8,16 @@ import time
 from dotenv import load_dotenv
 import logging
 import json
-from logging.handlers import RotatingFileHandler
 
 
-# Create logs directory if it doesn't exist
-os.makedirs('logs', exist_ok=True)
+def console_log(event_type: str, user: str, details: str):
+    """Log events to console with formatting"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] 🧙 {user} | {event_type} | {details}")
 
-# Configure file handler with rotation
-file_handler = RotatingFileHandler(
-    'logs/code_wizard.log',
-    maxBytes=1024 * 1024,  # 1MB
-    backupCount=5
-)
 
-# Configure logging with both console and file output
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    handlers=[
-        file_handler,
-        logging.StreamHandler()
-    ]
-)
 
-logger = logging.getLogger('CodeWizard')
 
-def log_event(event_type: str, content: str, metadata: dict = None):
-    """Structured logging function for all events"""
-    try:
-        log_data = {
-            'event_type': event_type,
-            'content': content,
-            'timestamp': datetime.now().isoformat(),
-            'metadata': metadata or {}
-        }
-        logger.info(json.dumps(log_data))
-    except Exception as e:
-        logger.error(f"Logging error: {str(e)}")
 
 
 # Load environment variables
@@ -72,52 +44,247 @@ st.markdown("""
 
     /* Theme Variables */
     :root {
+        /* Light Theme Colors */
         --primary-color: #6366f1;
         --secondary-color: #8b5cf6;
         --success-color: #22c55e;
+        --warning-color: #f59e0b;
+        --error-color: #ef4444;
         --light-bg: #f8fafc;
         --dark-bg: #1a1a1a;
         --light-text: #ffffff;
         --dark-text: #1a1a1a;
         --border-light: #e2e8f0;
+        --border-dark: #404040;
+        
+        /* Spacing */
+        --spacing-xs: 0.25rem;
+        --spacing-sm: 0.5rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        
+        /* Transitions */
+        --transition-fast: 0.2s ease;
+        --transition-normal: 0.3s ease;
+        --transition-slow: 0.5s ease;
+    }
+
+    /* Dark Mode Variables */
+    [data-theme="dark"] {
+        --background-color: var(--dark-bg);
+        --text-color: var(--light-text);
+        --card-bg: #2d2d2d;
+        --card-border: var(--border-dark);
+        --highlight-bg: #2d3748;
+        --code-bg: #2d2d2d;
+        --input-bg: #374151;
+        --input-text: var(--light-text);
+        --shadow-color: rgba(0, 0, 0, 0.3);
+    }
+
+    /* Light Mode Variables */
+    [data-theme="light"] {
+        --background-color: var(--light-bg);
+        --text-color: var(--dark-text);
+        --card-bg: #ffffff;
+        --card-border: var(--border-light);
+        --highlight-bg: #e0f2fe;
+        --code-bg: #f8fafc;
+        --input-bg: #ffffff;
+        --input-text: var(--dark-text);
+        --shadow-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Main App Container */
+    .stApp {
+        background-color: var(--background-color);
+        color: var(--text-color);
+        transition: background-color var(--transition-normal);
+    }
+
+    /* Hide Streamlit Default Elements */
+    .stApp > header {
+        display: none !important;
+    }
+
+    /* Welcome Container */
+    .welcome-container {
+        text-align: center;
+        padding: var(--spacing-xl);
+        background: linear-gradient(145deg, var(--card-bg), var(--highlight-bg));
+        border-radius: 1rem;
+        margin-bottom: var(--spacing-xl);
+        box-shadow: 0 4px 15px var(--shadow-color);
+        animation: slideIn 0.8s ease-out, fadeIn 0.8s ease-out;
+        border: 1px solid var(--card-border);
+    }
+
+    /* Welcome Title */
+    .welcome-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: var(--spacing-md);
+        animation: gradientFlow 8s ease infinite;
+    }
+
+    /* Stats Cards */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-md);
+        margin: var(--spacing-lg) 0;
+    }
+
+    .stats-card {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: var(--spacing-lg);
+        border: 1px solid var(--card-border);
+        box-shadow: 0 4px 6px var(--shadow-color);
+        transition: all var(--transition-normal);
+        animation: slideUp 0.5s ease-out;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 12px var(--shadow-color);
+    }
+
+    /* Chat Messages */
+    .chat-container {
+        margin: var(--spacing-lg) 0;
+        animation: fadeIn var(--transition-normal);
+    }
+
+    .chat-message {
+        padding: var(--spacing-md);
+        border-radius: 0.5rem;
+        margin-bottom: var(--spacing-md);
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        box-shadow: 0 2px 4px var(--shadow-color);
+        animation: slideIn 0.3s ease-out;
+    }
+
+    .user-message {
+        margin-left: var(--spacing-xl);
+        background: var(--highlight-bg);
+    }
+
+    .assistant-message {
+        margin-right: var(--spacing-xl);
+    }
+
+    /* Input Elements */
+    .stTextInput input {
+        color: var(--input-text);
+        background-color: var(--input-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 0.5rem;
+        padding: var(--spacing-sm) var(--spacing-md);
+        transition: all var(--transition-normal);
+    }
+
+    .stTextInput input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Code Area */
+    .stTextArea textarea {
+        font-family: 'Courier New', Courier, monospace;
+        background-color: var(--code-bg);
+        color: var(--text-color);
+        border: 1px solid var(--card-border);
+        border-radius: 0.5rem;
+        padding: var(--spacing-md);
+        font-size: 0.9rem;
+        line-height: 1.5;
+        transition: all var(--transition-normal);
+    }
+
+    .stTextArea textarea:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Buttons */
+    .stButton button {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: var(--light-text) !important;
+        border: none;
+        padding: var(--spacing-sm) var(--spacing-xl);
+        border-radius: 0.5rem;
+        font-weight: bold;
+        transition: all var(--transition-normal);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .stButton button:active {
+        transform: translateY(0);
+    }
+
+    /* Progress Bar */
+    .stProgress > div > div > div {
+        background-color: var(--primary-color);
+        transition: width var(--transition-normal);
+    }
+
+    /* Tooltips */
+    [data-tooltip]:hover::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        background: var(--dark-bg);
+        color: var(--light-text);
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        animation: fadeIn 0.2s ease-out;
     }
 
     /* Animations */
-    @keyframes floatIn {
-        0% { 
-            transform: translateY(20px); 
-            opacity: 0; 
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
         }
-        100% { 
-            transform: translateY(0); 
-            opacity: 1; 
+        to {
+            opacity: 1;
+            transform: translateX(0);
         }
     }
 
-    @keyframes glowPulse {
-        0% { 
-            box-shadow: 0 0 5px var(--primary-color);
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
         }
-        50% { 
-            box-shadow: 0 0 20px var(--primary-color);
-        }
-        100% { 
-            box-shadow: 0 0 5px var(--primary-color);
-        }
-    }
-
-    @keyframes sparkle {
-        0%, 100% { 
-            opacity: 0; 
-            transform: scale(0);
-        }
-        50% { 
-            opacity: 1; 
-            transform: scale(1);
+        to {
+            opacity: 1;
+            transform: translateY(0);
         }
     }
 
-    @keyframes gradientBG {
+    @keyframes gradientFlow {
         0% {
             background-position: 0% 50%;
         }
@@ -129,139 +296,49 @@ st.markdown("""
         }
     }
 
-    /* Welcome Container */
-    .welcome-container {
-        position: relative;
-        text-align: center;
-        padding: 2rem;
-        background: linear-gradient(-45deg, var(--primary-color), var(--secondary-color), #4f46e5, #7c3aed);
-        background-size: 400% 400%;
-        animation: gradientBG 15s ease infinite;
-        border-radius: 1rem;
-        margin: 2rem 0;
-        color: white;
-        overflow: hidden;
-    }
-
-    .welcome-title {
-        font-size: 2.5rem;
-        margin-bottom: 1rem;
-        animation: floatIn 1s ease-out;
-    }
-
-    /* Stats Cards */
-    .stats-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        padding: 1rem;
-    }
-
-    .stats-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-        animation: floatIn 0.8s ease-out;
-        cursor: pointer;
-    }
-
-    .stats-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 15px rgba(99, 102, 241, 0.2);
-    }
-
-    /* Code Area */
-    .code-input {
-        position: relative;
-        margin: 1rem 0;
-    }
-
-    .code-input::before {
-        content: '✨';
-        position: absolute;
-        right: 1rem;
-        top: 1rem;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-
-    .code-input:focus-within::before {
-        opacity: 1;
-    }
-
-    /* Buttons */
-    .magic-button {
-        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        border-radius: 0.5rem;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .magic-button::after {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 60%);
-        transform: scale(0);
-        opacity: 0;
-        transition: transform 0.6s, opacity 0.6s;
-    }
-
-    .magic-button:hover::after {
-        transform: scale(1);
-        opacity: 0.3;
-    }
-
-    /* Chat Messages */
-    .chat-message {
-        padding: 1rem;
-        margin: 0.5rem 0;
-        border-radius: 0.5rem;
-        animation: floatIn 0.5s ease-out;
-        position: relative;
-    }
-
-    .user-message {
-        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        margin-left: 2rem;
-    }
-
-    .assistant-message {
-        background: white;
-        border: 1px solid var(--border-light);
-        margin-right: 2rem;
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.05);
+        }
+        100% {
+            transform: scale(1);
+        }
     }
 
     /* Loading Animation */
-    .loading-wizard {
+    .loading {
         display: inline-block;
         position: relative;
         width: 80px;
         height: 80px;
     }
 
-    .loading-wizard::after {
-        content: '🪄';
-        font-size: 2rem;
+    .loading div {
         position: absolute;
-        animation: spin 1s linear infinite;
+        border: 4px solid var(--primary-color);
+        opacity: 1;
+        border-radius: 50%;
+        animation: loading 1s cubic-bezier(0, 0.2, 0.8, 1) infinite;
     }
 
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+    @keyframes loading {
+        0% {
+            top: 36px;
+            left: 36px;
+            width: 0;
+            height: 0;
+            opacity: 1;
+        }
+        100% {
+            top: 0px;
+            left: 0px;
+            width: 72px;
+            height: 72px;
+            opacity: 0;
+        }
     }
 
     /* Responsive Design */
@@ -275,63 +352,21 @@ st.markdown("""
         }
 
         .chat-message {
-            margin-left: 1rem;
-            margin-right: 1rem;
+            margin-left: var(--spacing-sm);
+            margin-right: var(--spacing-sm);
+        }
+    }
+
+    /* System Dark Mode Detection */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            color-scheme: dark;
         }
     }
 </style>
 
 <script>
-    // Function to add sparkles effect
-    function createSparkle() {
-        const sparkle = document.createElement('div');
-        sparkle.className = 'sparkle';
-        sparkle.style.left = Math.random() * 100 + '%';
-        sparkle.style.top = Math.random() * 100 + '%';
-        sparkle.style.animation = 'sparkle 1s forwards';
-        
-        document.querySelector('.welcome-container').appendChild(sparkle);
-        
-        setTimeout(() => {
-            sparkle.remove();
-        }, 1000);
-    }
-
-    // Add sparkles periodically
-    setInterval(createSparkle, 300);
-
-    // Add hover effects to stats cards
-    document.querySelectorAll('.stats-card').forEach(card => {
-        card.addEventListener('mouseover', function() {
-            this.style.transform = 'translateY(-5px) scale(1.02)';
-        });
-        
-        card.addEventListener('mouseout', function() {
-            this.style.transform = 'translateY(0) scale(1)';
-        });
-    });
-
-    // Add magic effect to buttons
-    document.querySelectorAll('.magic-button').forEach(button => {
-        button.addEventListener('click', function(e) {
-            const rect = button.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            const ripple = document.createElement('div');
-            ripple.className = 'ripple';
-            ripple.style.left = `${x}px`;
-            ripple.style.top = `${y}px`;
-            
-            button.appendChild(ripple);
-            
-            setTimeout(() => {
-                ripple.remove();
-            }, 600);
-        });
-    });
-
-    // Dark mode detection and handling
+    // Dark Mode Detection and Handling
     function setTheme() {
         const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
         document.body.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -342,106 +377,87 @@ st.markdown("""
 
     // Listen for system theme changes
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
-
-    // Smooth scroll animation
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function(e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            target.scrollIntoView({ behavior: 'smooth' });
-        });
-    });
 </script>
+""", unsafe_allow_html=True)
 
 
-def log_user_action(action_type: str, details: dict = None):
-    """Log user actions with additional details"""
-    log_data = {
-        "timestamp": datetime.now().isoformat(),
-        "user": st.session_state.user_name,
-        "action": action_type,
-        "session_id": st.session_state.get("session_id", "unknown"),
-        "details": details or {}
-    }
-    logging.info(json.dumps(log_data))
 
 def init_session_state():
-    """Initialize all session state variables"""
-    if 'session_id' not in st.session_state:
-        st.session_state.session_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+    """Initialize session state variables"""
     if 'messages' not in st.session_state:
         st.session_state.messages = []
     if 'code_submitted' not in st.session_state:
         st.session_state.code_submitted = False
     if 'current_code' not in st.session_state:
         st.session_state.current_code = ""
-    if 'conversation_history' not in st.session_state:
-        st.session_state.conversation_history = []
-    if 'is_code_context' not in st.session_state:
-        st.session_state.is_code_context = True
     if 'user_name' not in st.session_state:
         st.session_state.user_name = None
-    if 'session_start' not in st.session_state:
-        st.session_state.session_start = datetime.now()
     if 'questions_asked' not in st.session_state:
         st.session_state.questions_asked = 0
     if 'code_analyses' not in st.session_state:
         st.session_state.code_analyses = 0
+    if 'session_start' not in st.session_state:
+        st.session_state.session_start = datetime.now()
+
 
 def show_welcome_screen():
-    """Display the welcome screen and handle user name input."""
-    try:
-        st.markdown("""
-            <div class="welcome-container">
-                <h1 class="welcome-title">🪄 Welcome to Code Wizard</h1>
-                <p style="font-size: 1.2rem;">Your magical companion for code analysis and improvement</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        with st.form("welcome_form"):
-            name = st.text_input(
-                "🧙‍♂️ What's your name, fellow wizard?",
-                placeholder="Enter your name to begin..."
-            )
-            submitted = st.form_submit_button("✨ Begin Your Coding Journey", use_container_width=True)
-            
-            if submitted:
-                if len(name.strip()) >= 2:
-                    st.session_state.user_name = name
-                    log_event("login", f"User logged in: {name}")
-                    st.success(f"Welcome aboard, {name}! 🌟")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    log_event("login_failed", "Invalid name attempt", {"name_length": len(name.strip())})
-                    st.warning("🪄 Please enter a valid name (at least 2 characters)")
-    except Exception as e:
-        log_event("error", f"Error in welcome screen: {str(e)}")
-        st.error("An error occurred. Please try again.")
-
-
-def show_user_stats():
-    """Display user session statistics."""
-    session_duration = datetime.now() - st.session_state.session_start
-    duration_mins = int(session_duration.total_seconds() / 60)
-    
+    """Display an engaging welcome screen"""
     st.markdown("""
-        <div class="stats-card">
-            <div class="stat-item">
+        <div class="welcome-container">
+            <h1 style="font-size: 2.5rem;">✨ Welcome to Code Wizard ✨</h1>
+            <p style="font-size: 1.2rem;">Your magical companion for code enhancement!</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    with st.form("welcome_form"):
+        name = st.text_input(
+            "🧙‍♂️ What shall we call you, fellow coder?",
+            placeholder="Enter your magical name..."
+        )
+        submitted = st.form_submit_button("🌟 Begin Your Coding Adventure", use_container_width=True)
+        
+        if submitted and len(name.strip()) >= 2:
+            st.session_state.user_name = name
+            console_log("LOGIN", name, "New user joined")
+            st.balloons()
+            st.success(f"Welcome to the coding realm, {name}! 🌟")
+            time.sleep(1)
+            st.rerun()
+        elif submitted:
+            st.warning("🪄 A wizard needs a proper name (at least 2 characters)!")
+
+
+def show_stats():
+    """Display user stats with animations"""
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+            <div class="stats-card">
                 <h3>⏱️ Session Duration</h3>
-                <p>{}</p>
+                <p>{} minutes</p>
             </div>
-            <div class="stat-item">
+        """.format(int((datetime.now() - st.session_state.session_start).total_seconds() / 60)), 
+        unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+            <div class="stats-card">
                 <h3>❓ Questions Asked</h3>
                 <p>{}</p>
             </div>
-            <div class="stat-item">
+        """.format(st.session_state.questions_asked), 
+        unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+            <div class="stats-card">
                 <h3>🔍 Code Analyses</h3>
                 <p>{}</p>
             </div>
-        </div>
-    """.format(duration_mins, st.session_state.questions_asked, st.session_state.code_analyses), 
-    unsafe_allow_html=True)
+        """.format(st.session_state.code_analyses), 
+        unsafe_allow_html=True)
+
 
 def get_llm_response(prompt_template: str, **kwargs) -> str:
     """Get response from LLM using the new LangChain syntax"""
@@ -465,67 +481,54 @@ def get_llm_response(prompt_template: str, **kwargs) -> str:
         st.error(f"Error in LLM processing: {str(e)}")
         return None
 
-def analyze_code(code: str, query: str = None, is_initial_analysis: bool = True) -> str:
-    """Analyze code using the Groq LLM."""
+def analyze_code(code: str, query: str = None) -> str:
+    """Analyze code using Groq LLM"""
     try:
-        response = None
-        if is_initial_analysis:
-            prompt_template = """
-                As a coding expert, analyze this code:
+        llm = ChatGroq(
+            groq_api_key=st.secrets["GROQ_API_KEY"],
+            model_name="mixtral-8x7b-32768",
+            temperature=0.7
+        )
+        
+        if query is None:
+            prompt = ChatPromptTemplate.from_template("""
+                As a friendly coding wizard, analyze this code:
                 
                 ```
                 {code}
                 ```
                 
-                Provide a detailed yet engaging analysis including:
-                1. 🎯 Overview of what the code does
-                2. 🔍 Key components and their functionality
-                3. 💡 Notable programming concepts used
-                4. ⚡ Performance considerations
-                5. 🛡️ Security considerations if applicable
-                6. ✨ Potential improvements and best practices
+                Provide an engaging analysis with:
+                1. 🎯 What's the code's purpose?
+                2. 🔍 Key magical components
+                3. 💫 Cool programming concepts
+                4. ⚡ Performance insights
+                5. 🛡️ Security considerations
+                6. ✨ Enhancement suggestions
                 
-                Make your explanation clear, engaging, and actionable, using emojis and formatting to enhance readability.
-                """
-            return get_llm_response(prompt_template, code=code)
-        
+                Make it fun and clear, like explaining to a fellow wizard!
+            """)
         else:
-            context = "\n".join([f"{msg['role']}: {msg['content']}" 
-                               for msg in st.session_state.conversation_history[-3:]])
-            
-            prompt_template = """
-            Question about the code:
-            ```
-            {code}
-            ```
-            
-            Question: {query}
-            
-            Previous context:
-            {context}
-            
-            Provide a focused, clear answer with relevant code references and examples where applicable.
-            Use emojis and formatting to make the explanation more engaging.
-            """
-            response = get_llm_response(prompt_template, code=code, query=query, context=context)
-            
-            # Log the analysis request
-            log_user_action(
-                "code_analysis" if is_initial_analysis else "follow_up_question",
-                {
-                    "code_length": len(code),
-                    "query": query if query else "initial_analysis",
-                    "success": bool(response)
-                }
-            )
-            return response
+            prompt = ChatPromptTemplate.from_template("""
+                Regarding this code:
+                ```
+                {code}
+                ```
+                Question: {query}
+                
+                Provide a clear, wizard-friendly answer with relevant examples! ✨
+            """)
+        
+        chain = prompt | llm
+        response = chain.invoke({"code": code, "query": query} if query else {"code": code})
+        console_log("ANALYSIS", st.session_state.user_name, 
+                   "Follow-up question" if query else "Initial analysis")
+        return response.content
     except Exception as e:
-        log_user_action("error", {
-            "error_type": str(type(e).__name__),
-            "error_message": str(e),
-            "action": "code_analysis"
-        })
-        raise e
+        console_log("ERROR", st.session_state.user_name, f"Analysis error: {str(e)}")
+        st.error("🔮 Oops! The magic went wrong. Please try again!")
+        return None
+
 
 def render_code_analysis_section():
     """Render the code analysis section of the app"""
